@@ -1,0 +1,24 @@
+websites:
+  - name: "ikuuu"
+    url: "https://ikuuu.de"
+    method: "POST"
+    headers:
+      "origin": "https://ikuuu.de"
+      "referer": "https://ikuuu.de/user"
+      "user-agent": ""
+      "x-requested-with": "XMLHttpRequest"
+      "Cookie": ""
+
+  - name: "Quark"
+    url: "https://drive-m.quark.cn"
+    method: "POST"
+    headers:
+      Cookie: "YOUR_COOKIE"
+    body: '{"pr":"ucpro","fr":"android","kps":"YOUR_KPS","sign":"YOUR_SIGN","vcode":"YOUR_VCODE"}'
+
+notifications:
+  wecom:
+    webhook: "YOUR_WECOM_WEBHOOK_URL"
+  telegram:
+    bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
+    chat_id: "YOUR_CHAT_ID"
