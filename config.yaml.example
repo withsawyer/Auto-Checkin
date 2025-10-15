@@ -1,3 +1,4 @@
+cron: "0 9 * * *"  # 每天上午9点执行
 websites:
   - name: "ikuuu"
     url: "https://ikuuu.de"

@@ -1,4 +1,4 @@
-package scheduler
+package handler
 
 import (
 	cfg "auto-checkin/internal/config"
@@ -24,6 +24,7 @@ func init() {
 
 // Quark 封装夸克签到逻辑
 type Quark struct {
+	BaseLogic
 	Config Config // 夸克网盘配置信息
 }
 
@@ -115,23 +116,18 @@ func (q *Quark) getGrowthSign() (bool, string, error) {
 }
 
 // DoSign 执行签到任务
-func (q *Quark) doSign() string {
-	message := ""
-
+func (q *Quark) doSign() error {
 	userinfo := q.getUserInfo()
 	if userinfo == nil {
-		message += fmt.Sprintf("❌ 获取用户信息失败\n")
-		return message
+		q.PushContent("❌ 获取用户信息失败")
+		return fmt.Errorf("❌ 获取用户信息失败")
 	}
-	message += fmt.Sprintf("🔔 用户名: %s\n", userinfo["nickname"].(string))
-
 	// 获取签到信息
 	growthInfo, err := q.getGrowthInfo()
 	if err != nil {
-		message += fmt.Sprintf("❌ 获取成长信息失败: %v\n", err)
-		return message
+		q.PushContent("❌ 获取成长信息失败")
+		return fmt.Errorf("❌ 获取成长信息失败: %v", err)
 	}
-
 	// 记录用户信息
 	isVIP := "普通用户"
 	if growthInfo["88VIP"].(bool) {
@@ -139,17 +135,17 @@ func (q *Quark) doSign() string {
 	} else if growthInfo["super_vip_exp_at"].(float64) > 0 {
 		isVIP = "SVIP"
 	}
-	message += fmt.Sprintf("%s\n", isVIP)
+	q.PushContent("👶 用户名: %s[%s]", userinfo["nickname"].(string), isVIP)
 
 	// 记录容量信息
 	totalCapacity := growthInfo["total_capacity"].(float64)
-	message += fmt.Sprintf("💾 网盘总容量: %s，", q.convertBytes(int64(totalCapacity)))
+	q.PushContent("💾 网盘总容量: %s，", q.convertBytes(int64(totalCapacity)))
 
 	if capComp, ok := growthInfo["cap_composition"].(map[string]interface{}); ok {
 		if reward, ok := capComp["sign_reward"].(float64); ok {
-			message += fmt.Sprintf("签到累计容量: %s\n", q.convertBytes(int64(reward)))
+			q.PushContent("✏️ 签到累计容量: %s", q.convertBytes(int64(reward)))
 		} else {
-			message += "签到累计容量: 0 MB\n"
+			q.PushContent("✏️ 签到累计容量: 0 MB")
 		}
 	}
 	// 检查是否已签到
@@ -158,23 +154,23 @@ func (q *Quark) doSign() string {
 			reward := capSign["sign_daily_reward"].(float64)
 			progress := capSign["sign_progress"].(float64)
 			target := capSign["sign_target"].(float64)
-			message += fmt.Sprintf("✅ 签到日志: 今日已签到+%s，连签进度(%.0f/%.0f)\n",
-				q.convertBytes(int64(reward)), progress, target)
+			q.PushContent("✅ 签到日志: 今日已签到+%s，连签进度(%.0f/%.0f)", q.convertBytes(int64(reward)), progress, target)
 		} else {
 			success, reward, err := q.getGrowthSign()
 			if err != nil {
-				message += fmt.Sprintf("❌ 签到异常: %v\n", err)
+				q.PushContent("❌ 签到异常")
+				logger.Log().Errorf("❌ 签到异常: %v", err)
 			} else if success {
 				progress := capSign["sign_progress"].(float64) + 1
 				target := capSign["sign_target"].(float64)
-				message += fmt.Sprintf("✅ 执行签到: 今日签到+%s，连签进度(%.0f/%.0f)\n", reward, progress, target)
+				q.PushContent("✅ 执行签到: 今日签到+%s，连签进度(%.0f/%.0f)", reward, progress, target)
 			} else {
-				message += fmt.Sprintf("❌ 签到异常: %s\n", reward)
+				q.PushContent("❌ 签到异常")
+				logger.Log().Errorf("❌ 签到异常: %s\n", reward)
 			}
 		}
 	}
-
-	return message
+	return nil
 }
 
 // NewQuark 初始化 Quark 实例
@@ -186,17 +182,22 @@ func NewQuark(website cfg.Website) *Quark {
 	}
 	config.URL = website.URL
 	config.Headers = website.Headers
-	return &Quark{
+
+	obj := &Quark{
 		Config: config,
 	}
+	obj.Content = "👙 [服务]" + website.Name + "签到信息\n"
+	return obj
 }
 
 func (q *Quark) Run(website cfg.Website) string {
-	logger.Log().Info("----------夸克网盘开始签到----------")
+	logger.Log().Debug("----------夸克网盘开始签到----------")
 	// 执行签到
 	quark := NewQuark(website)
-	msg := quark.doSign()
-	logger.Log().Info(msg)
-	logger.Log().Info("----------夸克网盘签到完毕----------")
-	return msg
+	res := quark.doSign()
+	if res != nil {
+		logger.Log().Error("签到失败: " + res.Error())
+	}
+	logger.Log().Debug("----------夸克网盘签到完毕----------")
+	return quark.Content
 }

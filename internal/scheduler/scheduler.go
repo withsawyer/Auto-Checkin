@@ -2,48 +2,45 @@ package scheduler
 
 import (
 	"auto-checkin/internal/config"
+	"auto-checkin/internal/handler"
 	"auto-checkin/internal/logger"
+	"auto-checkin/internal/util"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"regexp"
+	"strings"
+	"sync"
 	"time"
 
-	"auto-checkin/internal/http"
 	"auto-checkin/internal/notifier"
 )
 
 type Scheduler struct {
-	websites []config.Website
-	client   *http.Client
 	notifier *notifier.Notifier
 	ticker   *time.Ticker
 	done     chan bool
 }
 
-func New(websites []config.Website, client *http.Client, notifier *notifier.Notifier) *Scheduler {
+func New(notifier *notifier.Notifier) *Scheduler {
 	return &Scheduler{
-		websites: websites,
-		client:   client,
 		notifier: notifier,
 		done:     make(chan bool),
 	}
 }
 
 func (s *Scheduler) Start() {
-	//s.ticker = time.NewTicker(24 * time.Hour)
-	//s.ticker = time.NewTicker(1 * time.Second)
-	s.runCheckIn()
-	fmt.Printf("定时任务已启动\n")
-	//go func() {
-	//	for {
-	//		select {
-	//		case <-s.ticker.C:
-	//			print("定时任务已执行")
-	//			s.runCheckIn()
-	//		case <-s.done:
-	//			return
-	//		}
-	//	}
-	//}()
+	if config.Cfg.Debug {
+		s.runCheckIn()
+	} else {
+		c := cron.New(cron.WithLocation(util.GetTimeLocation()))
+		_, err := c.AddFunc(config.Cfg.Cron, s.runCheckIn)
+		if err != nil {
+			logger.Log().Error("定时任务配置错误: " + err.Error())
+			return
+		}
+		c.Start()
+		logger.Log().Info("定时任务已启动，执行规则: " + config.Cfg.Cron)
+	}
 }
 
 func (s *Scheduler) Stop() {
@@ -51,39 +48,38 @@ func (s *Scheduler) Stop() {
 	s.done <- true
 }
 
-// CheckInHandler 定义签到处理器接口
-type CheckInHandler interface {
-	Run(website config.Website) string
-}
-
-// checkInHandlers 全局工厂，存储所有签到处理器
-var checkInHandlers = make(map[string]CheckInHandler)
-
-// RegisterCheckInHandler 注册签到处理器
-func RegisterCheckInHandler(name string, handler CheckInHandler) {
-	checkInHandlers[name] = handler
-}
-
 func (s *Scheduler) runCheckIn() {
-	msg := "签到结果:"
-	for _, website := range s.websites {
-		msg += "\n　"
-		go func(w config.Website) {
-			handler, ok := checkInHandlers[w.Name]
+	signContent := "\n========== 签到任务报告 ==========\n"
+	logger.Log().Info("开始签到任务")
+	var wg sync.WaitGroup
+	logger.Log().Debug("当前注册的处理器: %+v", handler.CheckinHandlers)
+	fmt.Printf("%+v\n", handler.CheckinHandlers)
+	for index, website := range config.Cfg.Websites {
+		wg.Add(1)
+		go func(i int, w config.Website) {
+			defer wg.Done()
+			handle, ok := handler.CheckinHandlers[strings.ToLower(w.Name)]
 			if !ok {
+				signContent += "\n[服务] " + w.Name + "\n❌ 不支持的签到服务: " + w.Name + "\n"
 				logger.Log().Info("不支持的签到服务: " + w.Name)
 				return
 			}
 			logger.Log().Info("开始签到: " + w.Name)
-			m := handler.Run(w)
+			m := handle.Run(w)
 			if m != "" {
-				msg += m
+				signContent += "\n" + m
+				if index < len(config.Cfg.Websites)-1 {
+					signContent += "\n\n☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆\n"
+				}
 			}
 			logger.Log().Info("签到完成: " + w.Name)
-		}(website)
+		}(index, website)
 	}
-	fmt.Println(msg)
-	logger.Log().Info(msg)
+	wg.Wait()
+	signContent += "\n========== 任务结束 =========="
+	logger.Log().Debug(signContent)
+	_ = s.notifier.SendTelegram(signContent)
+	_ = s.notifier.SendWeCom(signContent)
 }
 
 func (s *Scheduler) matchLogic(url string, match string) bool {

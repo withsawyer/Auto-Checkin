@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"auto-checkin/internal/config"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -38,9 +40,12 @@ type Logger struct {
 func Log() *Logger {
 	once.Do(func() {
 		instance = &Logger{
-			level:      INFO,
+			level:      DEBUG,
 			maxSize:    10 * 1024 * 1024, // 10MB
 			maxBackups: 5,
+		}
+		if config.Cfg.Debug {
+			instance.debugLogger = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 		}
 	})
 	return instance
@@ -69,10 +74,21 @@ func (l *Logger) Init(filename string) error {
 	}
 
 	l.file = file
-	l.debugLogger = log.New(file, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	l.infoLogger = log.New(file, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	l.warnLogger = log.New(file, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile)
-	l.errorLogger = log.New(file, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	// 动态初始化日志输出目标
+	if config.Cfg.Debug {
+		// Debug 模式下，所有日志等级输出到控制台和文件
+		l.debugLogger = log.New(io.MultiWriter(file, os.Stdout), "DEBUG: ", log.Ldate|log.Ltime)
+		l.infoLogger = log.New(io.MultiWriter(file, os.Stdout), "INFO: ", log.Ldate|log.Ltime)
+		l.warnLogger = log.New(io.MultiWriter(file, os.Stdout), "WARN: ", log.Ldate|log.Ltime)
+		l.errorLogger = log.New(io.MultiWriter(file, os.Stdout), "ERROR: ", log.Ldate|log.Ltime)
+	} else {
+		// 非 Debug 模式下，仅输出到文件
+		l.debugLogger = log.New(file, "DEBUG: ", log.Ldate|log.Ltime)
+		l.infoLogger = log.New(file, "INFO: ", log.Ldate|log.Ltime)
+		l.warnLogger = log.New(file, "WARN: ", log.Ldate|log.Ltime)
+		l.errorLogger = log.New(file, "ERROR: ", log.Ldate|log.Ltime)
+	}
 
 	return nil
 }
@@ -84,8 +100,15 @@ func (l *Logger) SetLevel(level int) {
 
 // Debug 记录调试信息
 func (l *Logger) Debug(v ...interface{}) {
-	if l.level <= DEBUG && l.debugLogger != nil {
+	if config.Cfg.Debug && l.level <= DEBUG && l.debugLogger != nil {
 		l.debugLogger.Println(v...)
+	}
+}
+
+// Debugf 格式化记录调试信息
+func (l *Logger) Debugf(format string, v ...interface{}) {
+	if config.Cfg.Debug && l.level <= DEBUG && l.debugLogger != nil {
+		l.debugLogger.Printf(format, v...)
 	}
 }
 
@@ -96,6 +119,13 @@ func (l *Logger) Info(v ...interface{}) {
 	}
 }
 
+// Infof 格式化记录普通信息
+func (l *Logger) Infof(format string, v ...interface{}) {
+	if l.level <= INFO && l.infoLogger != nil {
+		l.infoLogger.Printf(format, v...)
+	}
+}
+
 // Warn 记录警告信息
 func (l *Logger) Warn(v ...interface{}) {
 	if l.level <= WARN && l.warnLogger != nil {
@@ -103,10 +133,24 @@ func (l *Logger) Warn(v ...interface{}) {
 	}
 }
 
+// Warn 记录警告信息
+func (l *Logger) Warnf(format string, v ...interface{}) {
+	if l.level <= WARN && l.warnLogger != nil {
+		l.warnLogger.Printf(format, v...)
+	}
+}
+
 // Error 记录错误信息
 func (l *Logger) Error(v ...interface{}) {
 	if l.level <= ERROR && l.errorLogger != nil {
 		l.errorLogger.Println(v...)
+	}
+}
+
+// Errorf 格式化记录错误信息
+func (l *Logger) Errorf(format string, v ...interface{}) {
+	if l.level <= ERROR && l.errorLogger != nil {
+		l.errorLogger.Printf(format, v...)
 	}
 }
 

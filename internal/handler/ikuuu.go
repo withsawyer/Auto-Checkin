@@ -1,4 +1,4 @@
-package scheduler
+package handler
 
 import (
 	cfg "auto-checkin/internal/config"
@@ -7,14 +7,15 @@ import (
 )
 
 type Ikuuu struct {
+	BaseLogic
 	Headers map[string]string
 }
 
 func init() {
-	RegisterCheckInHandler("quark", &Quark{}) // 注册处理器
+	RegisterCheckInHandler("ikuuu", &Ikuuu{}) // 注册处理器
 }
 
-func (i *Ikuuu) doSign() (string, error) {
+func (i *Ikuuu) doSign() error {
 	response, err := util.SendRequest(&util.RequestParams{
 		Method:             "POST",
 		URL:                "https://ikuuu.de/user/checkin",
@@ -22,28 +23,30 @@ func (i *Ikuuu) doSign() (string, error) {
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
-	return response["msg"].(string), nil
+	i.PushContent("💾 %s", response["msg"].(string))
+	return nil
 }
 
 // NewIkuuu 初始化 Quark 实例
 func NewIkuuu(website cfg.Website) *Ikuuu {
-	return &Ikuuu{
+	obj := &Ikuuu{
 		Headers: website.Headers,
 	}
+	obj.Content = "👙 [服务]" + website.Name + "签到信息\n"
+	return obj
 }
 
 // Run 执行签到操作
 func (i *Ikuuu) Run(website cfg.Website) string {
-	logger.Log().Info("----------IKuuu开始签到----------")
+	logger.Log().Debug("----------IKuuu开始签到----------")
 	ikuuu := NewIkuuu(website)
-	msg, err := ikuuu.doSign()
+	err := ikuuu.doSign()
 	if err != nil {
 		logger.Log().Error("[ikuuu]签到失败: " + err.Error())
-		return "签到失败: " + err.Error()
+		return ""
 	}
-	logger.Log().Info("----------IKuuu签到结果：" + msg + "----------")
-	logger.Log().Info("----------IKuuu结束签到----------")
-	return msg
+	logger.Log().Debug("----------IKuuu结束签到----------")
+	return ikuuu.Content
 }

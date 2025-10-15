@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	"auto-checkin/internal/config"
-	"auto-checkin/internal/http"
 	"auto-checkin/internal/logger"
 	"auto-checkin/internal/notifier"
 	"auto-checkin/internal/scheduler"
@@ -15,7 +14,7 @@ import (
 
 func main() {
 	// 加载配置
-	cfg, err := config.Load("config.yaml")
+	_, err := config.Init("config.yaml")
 	if err != nil {
 		log.Fatalf("加载配置失败: %v", err)
 	}
@@ -28,13 +27,9 @@ func main() {
 	logger.Log().Info("服务已启动")
 	defer logger.Log().Close()
 	// 初始化推送模块
-	notify := notifier.New(cfg.Notifications)
-
-	// 初始化HTTP客户端
-	client := http.NewClient()
-
+	notify := notifier.New()
 	// 初始化定时任务
-	sd := scheduler.New(cfg.Websites, client, notify)
+	sd := scheduler.New(notify)
 	sd.Start()
 
 	// 等待退出信号

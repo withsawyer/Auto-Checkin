@@ -23,12 +23,21 @@ type RequestParams struct {
 	Headers            map[string]string
 	InsecureSkipVerify bool
 	Timeout            int
+	Proxy              string
 }
 
 // createHTTPClient 创建HTTP客户端
-func createHTTPClient(insecureSkipVerify bool, timeout int) *http.Client {
+func createHTTPClient(insecureSkipVerify bool, timeout int, proxy string) *http.Client {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
+	}
+	if proxy != "" {
+		parse, err := url.Parse(proxy)
+		if err != nil {
+			logger.Log().Errorf("parse proxy error: %v", err)
+			return nil
+		}
+		transport.Proxy = http.ProxyURL(parse)
 	}
 
 	client := &http.Client{
@@ -99,7 +108,7 @@ func setContentType(request *http.Request, bodyData interface{}) {
 }
 
 func SendRequest(req *RequestParams) (map[string]interface{}, error) {
-	client := createHTTPClient(req.InsecureSkipVerify, req.Timeout)
+	client := createHTTPClient(req.InsecureSkipVerify, req.Timeout, req.Proxy)
 	urlWithQuery, err := buildURL(req.URL, req.QueryParams)
 	if err != nil {
 		return nil, err

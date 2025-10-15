@@ -20,6 +20,8 @@ type WeCom struct {
 
 type Telegram struct {
 	BotToken string `yaml:"bot_token"`
+	UID      string `yaml:"uid"`
+	APIHost  string `yaml:"api_host"`
 	ChatID   string `yaml:"chat_id"`
 }
 
@@ -27,15 +29,21 @@ type Notifications struct {
 	WeCom    WeCom    `yaml:"wecom"`
 	Telegram Telegram `yaml:"telegram"`
 }
-
+type Proxy struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+}
 type Config struct {
+	Cron          string        `yaml:"cron"`
+	Debug         bool          `yaml:"debug"`
 	Websites      []Website     `yaml:"websites"`
 	Notifications Notifications `yaml:"notifications"`
+	Proxy         Proxy         `yaml:"proxy"`
 }
 
 var Cfg = &Config{}
 
-func Load(filename string) (*Config, error) {
+func Init(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
