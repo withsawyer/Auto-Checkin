@@ -8,16 +8,6 @@ import (
 	"fmt"
 )
 
-// Config 定义配置文件结构
-type Config struct {
-	User    string            `json:"user"`    // 用户名称
-	URL     string            `json:"url"`     // 夸克网盘URL
-	KPS     string            `json:"kps"`     // KPS参数
-	Sign    string            `json:"sign"`    // 签名参数
-	VCode   string            `json:"vcode"`   // 验证码参数
-	Headers map[string]string `json:"headers"` // 自定义HTTP Header
-}
-
 func init() {
 	RegisterCheckInHandler("quark", &Quark{}) // 注册处理器
 }
@@ -25,7 +15,8 @@ func init() {
 // Quark 封装夸克签到逻辑
 type Quark struct {
 	BaseLogic
-	Config Config // 夸克网盘配置信息
+	website cfg.Website
+	//Config QuarkConfig // 夸克网盘配置信息
 }
 
 // convertBytes 将字节转换为 MB/GB/TB
@@ -48,7 +39,7 @@ func (q *Quark) getUserInfo() map[string]interface{} {
 			"fr":       "pc",
 			"platform": "pc",
 		},
-		Headers:            q.Config.Headers,
+		Headers:            q.website.Headers,
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
@@ -63,16 +54,10 @@ func (q *Quark) getUserInfo() map[string]interface{} {
 // getGrowthInfo 获取用户当前的签到信息
 func (q *Quark) getGrowthInfo() (map[string]interface{}, error) {
 	result, err := util.SendRequest(&util.RequestParams{
-		Method: "GET",
-		URL:    "https://drive-m.quark.cn/1/clouddrive/capacity/growth/info",
-		QueryParams: map[string]string{
-			"pr":    "ucpro",
-			"fr":    "android",
-			"kps":   q.Config.KPS,
-			"sign":  q.Config.Sign,
-			"vcode": q.Config.VCode,
-		},
-		Headers:            q.Config.Headers,
+		Method:             "GET",
+		URL:                "https://drive-m.quark.cn/1/clouddrive/capacity/growth/info",
+		QueryParams:        q.website.Query,
+		Headers:            q.website.Headers,
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
@@ -87,21 +72,16 @@ func (q *Quark) getGrowthInfo() (map[string]interface{}, error) {
 
 // getGrowthSign 执行签到
 func (q *Quark) getGrowthSign() (bool, string, error) {
-	jsonData, err := json.Marshal(map[string]string{
-		"pr":    "ucpro",
-		"fr":    "android",
-		"kps":   q.Config.KPS,
-		"sign":  q.Config.Sign,
-		"vcode": q.Config.VCode,
-	})
+	jsonData, err := json.Marshal(q.website.Body)
 	if err != nil {
 		return false, "", err
 	}
 	response, err := util.SendRequest(&util.RequestParams{
 		Method:             "POST",
 		URL:                "https://drive-m.quark.cn/1/clouddrive/capacity/growth/sign",
+		QueryParams:        q.website.Query,
 		BodyData:           jsonData,
-		Headers:            q.Config.Headers,
+		Headers:            q.website.Headers,
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
@@ -120,7 +100,6 @@ func (q *Quark) doSign() error {
 	userinfo := q.getUserInfo()
 	if userinfo == nil {
 		q.PushContent("❌ 获取用户信息失败")
-		return fmt.Errorf("❌ 获取用户信息失败")
 	}
 	// 获取签到信息
 	growthInfo, err := q.getGrowthInfo()
@@ -135,8 +114,12 @@ func (q *Quark) doSign() error {
 	} else if growthInfo["super_vip_exp_at"].(float64) > 0 {
 		isVIP = "SVIP"
 	}
-	q.PushContent("👶 用户名: %s[%s]", userinfo["nickname"].(string), isVIP)
-
+	// 昵称兼容显示
+	nickname := userinfo["nickname"].(string)
+	if nickname == "" {
+		nickname = "查询失败"
+	}
+	q.PushContent("👶 用户名: %s[%s]", nickname, isVIP)
 	// 记录容量信息
 	totalCapacity := growthInfo["total_capacity"].(float64)
 	q.PushContent("💾 网盘总容量: %s，", q.convertBytes(int64(totalCapacity)))
@@ -175,16 +158,8 @@ func (q *Quark) doSign() error {
 
 // NewQuark 初始化 Quark 实例
 func NewQuark(website cfg.Website) *Quark {
-	var config Config
-	err := json.Unmarshal([]byte(website.Body), &config)
-	if err != nil {
-		return nil
-	}
-	config.URL = website.URL
-	config.Headers = website.Headers
-
 	obj := &Quark{
-		Config: config,
+		website: website,
 	}
 	obj.Content = "👙 [服务]" + website.Name + "签到信息\n"
 	return obj

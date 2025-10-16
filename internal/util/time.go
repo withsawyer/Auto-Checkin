@@ -13,3 +13,19 @@ func GetTimeLocation() *time.Location {
 	}
 	return time.Local
 }
+
+func GetNowUnixTimestamp() int64 {
+	currentTime := time.Now()
+	// 获取精确到秒的时间戳
+	timestamp := currentTime.Unix()
+	return timestamp
+}
+
+func GetMilliTimestamp() int64 {
+	currentTime := time.Now()
+	// 获取纳秒时间戳
+	nanoTimestamp := currentTime.UnixNano()
+	// 将纳秒时间戳转换为毫秒时间戳
+	milliTimestamp := nanoTimestamp / 1_000_000
+	return milliTimestamp
+}

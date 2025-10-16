@@ -1,44 +1,43 @@
 package config
 
 import (
-	"gopkg.in/yaml.v2"
+	"encoding/json"
 	"os"
 )
 
 type Website struct {
-	Name    string            `yaml:"name"`
-	URL     string            `yaml:"url"`
-	Method  string            `yaml:"method"`
-	Headers map[string]string `yaml:"headers"`
-	Body    string            `yaml:"body"`
-	Cookies map[string]string `yaml:"cookies"`
+	Name    string            `json:"name"`
+	Headers map[string]string `json:"headers"`
+	Query   map[string]string `json:"query"`
+	Body    map[string]any    `json:"body"`
+	Cookies map[string]string `json:"cookies"`
 }
 
 type WeCom struct {
-	Webhook string `yaml:"webhook"`
+	Webhook string `json:"webhook"`
 }
 
 type Telegram struct {
-	BotToken string `yaml:"bot_token"`
-	UID      string `yaml:"uid"`
-	APIHost  string `yaml:"api_host"`
-	ChatID   string `yaml:"chat_id"`
+	BotToken string `json:"bot_token"`
+	UID      string `json:"uid"`
+	APIHost  string `json:"api_host"`
+	ChatID   string `json:"chat_id"`
 }
 
 type Notifications struct {
-	WeCom    WeCom    `yaml:"wecom"`
-	Telegram Telegram `yaml:"telegram"`
+	WeCom    WeCom    `json:"wecom"`
+	Telegram Telegram `json:"telegram"`
 }
 type Proxy struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
+	Host string `json:"host"`
+	Port string `json:"port"`
 }
 type Config struct {
-	Cron          string        `yaml:"cron"`
-	Debug         bool          `yaml:"debug"`
-	Websites      []Website     `yaml:"websites"`
-	Notifications Notifications `yaml:"notifications"`
-	Proxy         Proxy         `yaml:"proxy"`
+	Cron          string        `json:"cron"`
+	Debug         bool          `json:"debug"`
+	Websites      []Website     `json:"websites"`
+	Notifications Notifications `json:"notifications"`
+	Proxy         Proxy         `json:"proxy"`
 }
 
 var Cfg = &Config{}
@@ -49,7 +48,7 @@ func Init(filename string) (*Config, error) {
 		return nil, err
 	}
 
-	if err := yaml.Unmarshal(data, Cfg); err != nil {
+	if err := json.Unmarshal(data, Cfg); err != nil {
 		return nil, err
 	}
 	return Cfg, nil

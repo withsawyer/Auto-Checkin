@@ -62,17 +62,18 @@ func (s *Scheduler) runCheckIn() {
 			if !ok {
 				signContent += "\n[服务] " + w.Name + "\n❌ 不支持的签到服务: " + w.Name + "\n"
 				logger.Log().Info("不支持的签到服务: " + w.Name)
-				return
-			}
-			logger.Log().Info("开始签到: " + w.Name)
-			m := handle.Run(w)
-			if m != "" {
-				signContent += "\n" + m
-				if index < len(config.Cfg.Websites)-1 {
-					signContent += "\n\n☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆\n"
+			} else {
+				logger.Log().Info("开始签到: " + w.Name)
+				m := handle.Run(w)
+				if m != "" {
+					signContent += "\n" + m
+					if index < len(config.Cfg.Websites)-1 {
+						signContent += "\n\n☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆\n"
+					}
 				}
+				logger.Log().Info("签到完成: " + w.Name)
 			}
-			logger.Log().Info("签到完成: " + w.Name)
+
 		}(index, website)
 	}
 	wg.Wait()

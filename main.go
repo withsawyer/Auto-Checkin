@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// 加载配置
-	_, err := config.Init("config.yaml")
+	_, err := config.Init("config.json")
 	if err != nil {
 		log.Fatalf("加载配置失败: %v", err)
 	}

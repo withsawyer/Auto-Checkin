@@ -129,6 +129,7 @@ func SendRequest(req *RequestParams) (map[string]interface{}, error) {
 		}
 	}
 	setContentType(request, req.BodyData)
+	logger.Log().Debug("Request URL: ", urlWithQuery)
 	resp, err := client.Do(request)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "Client.Timeout exceeded") {
@@ -139,7 +140,7 @@ func SendRequest(req *RequestParams) (map[string]interface{}, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("HTTP request failed with status code: %d  for URL: %s", resp.StatusCode, urlWithQuery)
 	}
 
 	// 读取响应体
@@ -150,7 +151,7 @@ func SendRequest(req *RequestParams) (map[string]interface{}, error) {
 	}
 	// 打印响应体内容
 	bodyString := string(bodyBytes)
-	logger.Log().Debug("Response Body:\n", bodyString)
+	logger.Log().Debugf("%s - Response Body: %s", urlWithQuery, bodyString)
 	var result map[string]interface{}
 	if err = json.Unmarshal(bodyBytes, &result); err != nil {
 		return nil, fmt.Errorf("failed to decode response body: %v", err)
