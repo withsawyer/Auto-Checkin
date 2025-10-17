@@ -5,7 +5,6 @@ import (
 	"auto-checkin/internal/handler"
 	"auto-checkin/internal/logger"
 	"auto-checkin/internal/util"
-	"fmt"
 	"github.com/robfig/cron/v3"
 	"regexp"
 	"strings"
@@ -49,35 +48,44 @@ func (s *Scheduler) Stop() {
 }
 
 func (s *Scheduler) runCheckIn() {
-	signContent := "\n========== 签到任务报告 ==========\n"
+
 	logger.Log().Info("开始签到任务")
 	var wg sync.WaitGroup
-	logger.Log().Debug("当前注册的处理器: %+v", handler.CheckinHandlers)
-	fmt.Printf("%+v\n", handler.CheckinHandlers)
+	var handlers []string
+	for h, _ := range handler.CheckinHandlers {
+		handlers = append(handlers, h)
+	}
+	logger.Log().Debug("当前注册的处理器: %+v", handlers)
+
+	var signRes []string
 	for index, website := range config.Cfg.Websites {
 		wg.Add(1)
 		go func(i int, w config.Website) {
 			defer wg.Done()
 			handle, ok := handler.CheckinHandlers[strings.ToLower(w.Name)]
 			if !ok {
-				signContent += "\n[服务] " + w.Name + "\n❌ 不支持的签到服务: " + w.Name + "\n"
+				signRes = append(signRes, "\n[服务] "+w.Name+"\n❌ 不支持的签到服务: "+w.Name+"\n")
 				logger.Log().Info("不支持的签到服务: " + w.Name)
 			} else {
 				logger.Log().Info("开始签到: " + w.Name)
 				m := handle.Run(w)
 				if m != "" {
-					signContent += "\n" + m
-					if index < len(config.Cfg.Websites)-1 {
-						signContent += "\n\n☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆\n"
-					}
+					signRes = append(signRes, "\n"+m)
 				}
 				logger.Log().Info("签到完成: " + w.Name)
 			}
 
 		}(index, website)
 	}
+	signContent := "\n≡≡≡≡≡≡ 签到任务报告 ≡≡≡≡≡≡\n"
 	wg.Wait()
-	signContent += "\n========== 任务结束 =========="
+	for i, re := range signRes {
+		signContent += re
+		if i < len(signRes)-1 {
+			signContent += "\n—————————————\n"
+		}
+	}
+	signContent += "\n≡≡≡≡≡≡ 任务结束 ≡≡≡≡≡≡"
 	logger.Log().Debug(signContent)
 	_ = s.notifier.SendTelegram(signContent)
 	_ = s.notifier.SendWeCom(signContent)

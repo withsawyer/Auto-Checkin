@@ -129,7 +129,7 @@ func SendRequest(req *RequestParams) (map[string]interface{}, error) {
 		}
 	}
 	setContentType(request, req.BodyData)
-	logger.Log().Debug("Request URL: ", urlWithQuery)
+	logger.Log().Debug("正在发送请求Request URL: ", urlWithQuery)
 	resp, err := client.Do(request)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "Client.Timeout exceeded") {

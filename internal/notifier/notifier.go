@@ -17,7 +17,7 @@ func New() *Notifier {
 }
 
 func (n *Notifier) SendWeCom(message string) error {
-	if config.Cfg.Notifications.WeCom.Webhook == "" {
+	if config.Cfg.Notifications.WeCom.KEY == "" {
 		logger.Log().Debug("未配置企微消息推送")
 		return nil
 	}
@@ -28,14 +28,14 @@ func (n *Notifier) SendWeCom(message string) error {
 			"content": message,
 		},
 	}
-
+	webhook := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", config.Cfg.Notifications.WeCom.KEY)
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 	resp, err := util.SendRequest(&util.RequestParams{
 		Method:             "POST",
-		URL:                config.Cfg.Notifications.WeCom.Webhook,
+		URL:                webhook,
 		QueryParams:        nil,
 		BodyData:           jsonPayload,
 		InsecureSkipVerify: true,

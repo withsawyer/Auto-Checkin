@@ -14,7 +14,7 @@ type Website struct {
 }
 
 type WeCom struct {
-	Webhook string `json:"webhook"`
+	KEY string `json:"key"`
 }
 
 type Telegram struct {

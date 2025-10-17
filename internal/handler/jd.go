@@ -24,7 +24,7 @@ func (j *JD) balance() error {
 	reqData.Add("functionId", "BEAN_BALANCE")
 	reqData.Add("body", "{}")
 	reqData.Add("client", j.website.Body["client"].(string))
-	reqData.Add("_t", fmt.Sprintf("%d", util.GetMilliTimestamp()))
+	reqData.Add("_t", "1760671276136")
 
 	reqParams := &util.RequestParams{
 		Method: "POST",
@@ -90,14 +90,15 @@ func (j *JD) doSign() error {
 			}
 		}
 		j.PushContent("✅ 京东签到成功")
+		return nil
 	} else {
 		if errCode, ok := response["errCode"].(string); ok && errCode == "302" {
 			j.PushContent("✅ 京东已完成签到")
+			return nil
 		} else {
 			if errMessage, ok := response["errMessage"].(string); ok {
 				j.PushContent("📞 %s", errMessage)
 			}
-
 		}
 	}
 	j.PushContent("❌ 京东签到失败")
