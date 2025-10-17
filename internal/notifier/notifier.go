@@ -57,6 +57,7 @@ func (n *Notifier) SendWeCom(message string) error {
 		logger.Log().Errorf("企微消息推送失败: %s", errmsg)
 		return fmt.Errorf("企微消息推送失败: %s", errmsg)
 	}
+	logger.Log().Info("telegram推送成功！")
 	return nil
 }
 

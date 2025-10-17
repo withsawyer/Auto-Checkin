@@ -3,6 +3,17 @@
   "debug": true,
   "websites": [
     {
+      "name": "IKUUU",
+      "method": "POST",
+      "headers": {
+        "origin": "https://ikuuu.de",
+        "referer": "https://ikuuu.de/user",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 QuarkPC/4.5.0.511",
+        "x-requested-with": "XMLHttpRequest",
+        "Cookie": "YOUR_COOKIE"
+      }
+    },
+    {
       "name": "Quark",
       "method": "POST",
       "headers": {

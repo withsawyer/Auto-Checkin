@@ -29,6 +29,7 @@ func New(notifier *notifier.Notifier) *Scheduler {
 
 func (s *Scheduler) Start() {
 	if config.Cfg.Debug {
+		// 调试模式只执行一次
 		s.runCheckIn()
 	} else {
 		c := cron.New(cron.WithLocation(util.GetTimeLocation()))
