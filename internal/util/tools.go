@@ -2,8 +2,11 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
+	"strconv"
 )
 
 func JsonToUrlValues(jsonStr string) (url.Values, error) {
@@ -80,4 +83,36 @@ func Any2String(value any) (string, error) {
 		}
 		return string(jsonBytes), nil
 	}
+}
+
+// StringToInt 将字符串转换为 int 类型，并返回错误信息
+func StringToInt(s string) (int, error) {
+	if s == "" {
+		return 0, errors.New("输入为空")
+	}
+
+	// 使用 ParseFloat 解析字符串为 float64
+	fnum, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, fmt.Errorf("无法将字符串转换为数字: %w", err)
+	}
+	// 检查浮点数是否为有效整数
+	if fnum != math.Trunc(fnum) {
+		return 0, fmt.Errorf("字符串表示的数字不是有效的整数: %s", s)
+	}
+	// 转换为 int 类型
+	inum := int(fnum)
+	return inum, nil
+}
+
+// StringToFloat 将字符串转换为 float64 类型，并返回错误信息
+func StringToFloat(s string) (float64, error) {
+	if s == "" {
+		return 0.0, errors.New("输入为空")
+	}
+	fnum, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0.0, fmt.Errorf("无法将字符串转换为浮点数: %w", err)
+	}
+	return fnum, nil
 }

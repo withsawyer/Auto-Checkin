@@ -56,7 +56,7 @@ func (s *Scheduler) runCheckIn() {
 	for h, _ := range handler.CheckinHandlers {
 		handlers = append(handlers, h)
 	}
-	logger.Log().Debug("当前注册的处理器: %+v", handlers)
+	logger.Log().Debugf("当前注册的处理器: %+v", handlers)
 
 	var signRes []string
 	for index, website := range config.Cfg.Websites {
@@ -88,8 +88,7 @@ func (s *Scheduler) runCheckIn() {
 	}
 	signContent += "\n≡≡≡≡≡≡ 任务结束 ≡≡≡≡≡≡"
 	logger.Log().Debug(signContent)
-	_ = s.notifier.SendTelegram(signContent)
-	_ = s.notifier.SendWeCom(signContent)
+	s.notifier.Push(signContent)
 }
 
 func (s *Scheduler) matchLogic(url string, match string) bool {

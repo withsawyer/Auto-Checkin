@@ -16,6 +16,19 @@ func New() *Notifier {
 	return &Notifier{}
 }
 
+func (n *Notifier) Push(message string) {
+	err := n.SendTelegram(message)
+	if err != nil {
+		logger.Log().Errorf("telegram消息推送失败: %v", err)
+		return
+	}
+	err = n.SendWeCom(message)
+	if err != nil {
+		logger.Log().Errorf("企微消息推送失败: %v", err)
+		return
+	}
+}
+
 func (n *Notifier) SendWeCom(message string) error {
 	if config.Cfg.Notifications.WeCom.KEY == "" {
 		logger.Log().Debug("未配置企微消息推送")
@@ -79,17 +92,13 @@ func (n *Notifier) SendTelegram(message string) error {
 	formData.Add("text", message)
 	formData.Add("disable_web_page_preview", "true")
 
-	var proxyURL string
-	if config.Cfg.Proxy.Host != "" && config.Cfg.Proxy.Port != "" {
-		proxyURL = fmt.Sprintf("%s:%s", config.Cfg.Proxy.Host, config.Cfg.Proxy.Port)
-	}
 	logger.Log().Info("开始执行Telegram消息推送")
 	result, err := util.SendRequest(&util.RequestParams{
 		Method:             "POST",
 		URL:                apiUrl,
 		BodyData:           formData,
 		InsecureSkipVerify: false,
-		Proxy:              proxyURL,
+		Proxy:              true,
 	})
 	if err != nil {
 		logger.Log().Errorf("telegram消息推送失败: %v", err)

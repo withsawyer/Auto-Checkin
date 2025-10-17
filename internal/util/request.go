@@ -1,6 +1,7 @@
 package util
 
 import (
+	"auto-checkin/internal/config"
 	"auto-checkin/internal/logger"
 	"bytes"
 	"context"
@@ -20,24 +21,29 @@ type RequestParams struct {
 	URL                string
 	QueryParams        map[string]string
 	BodyData           interface{}
+	BodyToJson         bool
+	BodyToFormData     bool
 	Headers            map[string]string
 	InsecureSkipVerify bool
 	Timeout            int
-	Proxy              string
+	Proxy              bool
 }
 
 // createHTTPClient 创建HTTP客户端
-func createHTTPClient(insecureSkipVerify bool, timeout int, proxy string) *http.Client {
+func createHTTPClient(insecureSkipVerify bool, timeout int, proxy bool) *http.Client {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
 	}
-	if proxy != "" {
-		parse, err := url.Parse(proxy)
-		if err != nil {
-			logger.Log().Errorf("parse proxy error: %v", err)
-			return nil
+	if true == proxy {
+		if config.Cfg.Proxy.Host != "" && config.Cfg.Proxy.Port != "" {
+			proxyURL := fmt.Sprintf("%s:%s", config.Cfg.Proxy.Host, config.Cfg.Proxy.Port)
+			parse, err := url.Parse(proxyURL)
+			if err != nil {
+				logger.Log().Errorf("parse proxy error: %v", err)
+				return nil
+			}
+			transport.Proxy = http.ProxyURL(parse)
 		}
-		transport.Proxy = http.ProxyURL(parse)
 	}
 
 	client := &http.Client{
@@ -70,11 +76,10 @@ func buildURL(rawURL string, queryParams map[string]string) (string, error) {
 }
 
 // createRequestBody 根据BodyData类型创建请求体
-func createRequestBody(bodyData interface{}) (io.Reader, error) {
+func createRequestBody(bodyData interface{}, bodyToJson bool, bodyToFormData bool) (io.Reader, error) {
 	if bodyData == nil {
 		return nil, nil
 	}
-
 	switch v := bodyData.(type) {
 	case []byte:
 		return bytes.NewReader(v), nil
@@ -83,11 +88,26 @@ func createRequestBody(bodyData interface{}) (io.Reader, error) {
 	case url.Values:
 		return strings.NewReader(v.Encode()), nil
 	default:
-		marshal, err := json.Marshal(bodyData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body: %v", err)
+		if bodyToFormData {
+			formData := url.Values{}
+			if data, ok := bodyData.(map[string]interface{}); ok {
+				for key, value := range data {
+					formData.Add(key, fmt.Sprintf("%v", value))
+				}
+				return strings.NewReader(formData.Encode()), nil
+			}
+			return nil, fmt.Errorf("failed to convert body data to form data")
 		}
-		return bytes.NewReader(marshal), nil
+
+		if bodyToJson {
+			marshal, err := json.Marshal(bodyData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal request body: %v", err)
+			}
+			return bytes.NewReader(marshal), nil
+		}
+
+		return nil, fmt.Errorf("body data type not specified (JSON or FormData)")
 	}
 }
 
@@ -113,7 +133,7 @@ func SendRequest(req *RequestParams) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	bodyData, err := createRequestBody(req.BodyData)
+	bodyData, err := createRequestBody(req.BodyData, req.BodyToJson, req.BodyToFormData)
 	if err != nil {
 		return nil, err
 	}
