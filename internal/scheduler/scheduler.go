@@ -6,7 +6,6 @@ import (
 	"auto-checkin/internal/logger"
 	"auto-checkin/internal/util"
 	"github.com/robfig/cron/v3"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +22,6 @@ type Scheduler struct {
 func New(notifier *notifier.Notifier) *Scheduler {
 	return &Scheduler{
 		notifier: notifier,
-		done:     make(chan bool),
 	}
 }
 
@@ -40,16 +38,11 @@ func (s *Scheduler) Start() {
 		}
 		c.Start()
 		logger.Log().Info("定时任务已启动，执行规则: " + config.Cfg.Cron)
+		select {}
 	}
 }
 
-func (s *Scheduler) Stop() {
-	s.ticker.Stop()
-	s.done <- true
-}
-
 func (s *Scheduler) runCheckIn() {
-
 	logger.Log().Info("开始签到任务")
 	var wg sync.WaitGroup
 	var handlers []string
@@ -89,15 +82,4 @@ func (s *Scheduler) runCheckIn() {
 	signContent += "\n≡≡≡≡≡≡ 任务结束 ≡≡≡≡≡≡"
 	logger.Log().Debug(signContent)
 	s.notifier.Push(signContent)
-}
-
-func (s *Scheduler) matchLogic(url string, match string) bool {
-	// 创建正则表达式模式
-	re := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(match))
-	// 检查 URL 是否以指定前缀开头
-	if re.MatchString(url) {
-		return true
-	} else {
-		return false
-	}
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 定义项目名称和输出目录
-PROJECT_NAME="auto-checkin"
+PROJECT_NAME="Auto-Checkin"
 OUTPUT_DIR="dist"
 
 # 创建输出目录
