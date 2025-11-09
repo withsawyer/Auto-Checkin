@@ -6,6 +6,7 @@ import (
 	"auto-checkin/internal/util"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 func init() {
@@ -109,11 +110,14 @@ func (q *Quark) doSign() error {
 	}
 	// 记录用户信息
 	isVIP := "普通用户"
-	if growthInfo["88VIP"].(bool) {
-		isVIP = "88VIP"
-	} else if growthInfo["super_vip_exp_at"].(float64) > 0 {
-		isVIP = "SVIP"
+	if memberType,ok:=growthInfo["member_type"].(string);ok && strings.ToUpper(memberType)!="NORMAL"{
+		if growthInfo["88VIP"].(bool) {
+			isVIP = "88VIP"
+		} else if growthInfo["super_vip_exp_at"].(float64) > 0 {
+			isVIP = "SVIP"
+		}
 	}
+	
 	// 昵称兼容显示
 	nickname := userinfo["nickname"].(string)
 	if nickname == "" {
