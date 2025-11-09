@@ -6,6 +6,7 @@ import (
 	"auto-checkin/internal/logger"
 	"auto-checkin/internal/util"
 	"github.com/robfig/cron/v3"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +57,10 @@ func (s *Scheduler) runCheckIn() {
 		wg.Add(1)
 		go func(i int, w config.Website) {
 			defer wg.Done()
+			// 添加0-120秒的随机延迟
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			delay := time.Duration(r.Intn(121)) * time.Second
+			time.Sleep(delay)
 			handle, ok := handler.CheckinHandlers[strings.ToLower(w.Name)]
 			if !ok {
 				signRes = append(signRes, "\n[服务] "+w.Name+"\n❌ 不支持的签到服务: "+w.Name+"\n")
