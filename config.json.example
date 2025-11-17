@@ -61,7 +61,7 @@
     },
     "telegram": {
       "bot_token": "YOUR_BOT_TOKEN",
-      "uid": "YOUR_UID"",
+      "uid": "YOUR_UID",
       "chat_id": "YOUR_CHAT_ID"
     }
   },
