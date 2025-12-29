@@ -5,11 +5,12 @@ import (
 	"auto-checkin/internal/handler"
 	"auto-checkin/internal/logger"
 	"auto-checkin/internal/util"
-	"github.com/robfig/cron/v3"
 	"math/rand"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"auto-checkin/internal/notifier"
 )
@@ -44,6 +45,14 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) runCheckIn() {
+	// 添加0-60分钟的随机延迟
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	delayMinutes := r.Intn(61) // 0-60分钟
+	if delayMinutes > 0 {
+		logger.Log().Infof("签到任务将延迟 %d 分钟执行", delayMinutes)
+		time.Sleep(time.Duration(delayMinutes) * time.Minute)
+	}
+
 	logger.Log().Info("开始签到任务")
 	var wg sync.WaitGroup
 	var handlers []string
