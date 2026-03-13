@@ -18,7 +18,7 @@ func init() {
 func (i *Ikuuu) doSign() error {
 	response, err := util.SendRequest(&util.RequestParams{
 		Method:             "POST",
-		URL:                "https://ikuuu.de/user/checkin",
+		URL:                "https://ikuuu.nl/user/checkin",
 		Headers:            i.Headers,
 		InsecureSkipVerify: true,
 	})
